@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "pb/";
+
+import "node_message.proto";
+
+// To store the pass the chunkid we are looking for what Node contains it
+message ChunkData {
+    Node node = 1;
+    string chunkid = 2;
+}

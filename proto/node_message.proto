@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option go_package = "pb/";
+
+message Node {
+    string name = 1;
+    string ip = 2;
+    int32 port = 3;
+}

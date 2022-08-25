@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option go_package = "pb/";
+
+import "chunk_message.proto";
+import "node_message.proto";
+import "chunkdata_message.proto";
+
+message ShareFileDataRequest {
+    repeated ChunkData chunkdata = 1;
+}
+
+message ShareFileDataResponse {
+    bool ack = 1;
+}
+
+message UploadFileRequest {
+    Node node = 1;
+    Chunk chunk = 2;
+}
+
+message UploadFileResponse {
+    bool ack = 1; // acknowledgement response if the data was stored correctly
+}
+
+message DownloadFileRequest {
+    Node node = 1;
+    string chunkid = 2;
+}
+
+message DownloadFileResponse {
+    Chunk chunk = 1;
+}
+
+service UploadFileService {
+    rpc ShareFileData(ShareFileDataRequest) returns (ShareFileDataResponse);
+    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+}
