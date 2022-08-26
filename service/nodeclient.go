@@ -50,8 +50,10 @@ func NewNodeClient(name string, addr net.TCPAddr, routingTable *types.RoutingTab
 // Upload the chunk to all the known peers
 func (nc *NodeClient) UploadFile(ctx context.Context, in *pb.UploadFileRequest, opts ...grpc.CallOption) (*pb.UploadFileResponse, error) {
 	ch := make(chan pb.UploadFileResponse, len(nc.Peers))
+	print("gergloer")
 
 	for _, peer := range nc.Peers {
+		fmt.Println(peer)
 		go func(peer types.Node) error {
 			loc := fmt.Sprintf("%s:%d", peer.Ip, peer.Port)
 			conn, err := grpc.Dial(loc, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -62,7 +64,6 @@ func (nc *NodeClient) UploadFile(ctx context.Context, in *pb.UploadFileRequest, 
 
 			client := pb.NewUploadFileServiceClient(conn)
 			response, err := client.UploadFile(ctx, in)
-
 			if err != nil {
 				response = &pb.UploadFileResponse{Ack: false}
 			}
@@ -70,12 +71,14 @@ func (nc *NodeClient) UploadFile(ctx context.Context, in *pb.UploadFileRequest, 
 			nc.PeerChunk[peer.Name] = in.GetChunk().Id
 			nc.ChunkPeer[in.GetChunk().Id] = peer
 
+			fmt.Println(response.String())
 			ch <- *response
 			return nil
 		}(peer)
 	}
 
 	response := <-ch
+	// response := pb.UploadFileResponse{Ack: true}
 	return &response, nil
 }
 
@@ -87,18 +90,13 @@ func (nc *NodeClient) ShareFileWithNode(ctx context.Context, file types.File, no
 		return false, err
 	}
 
-	var chunkids []string
-	for _, chunk := range file.Chunks {
-		chunkids = append(chunkids, chunk.Id)
-	}
-
 	var chunkdata []*pb.ChunkData
-	for _, id := range chunkids {
+	for _, id := range file.Sequence {
 		pbnode := pb.Node{Name: nc.ChunkPeer[id].Name, Ip: nc.ChunkPeer[id].Ip, Port: nc.ChunkPeer[id].Port}
 		chunkdata = append(chunkdata, &pb.ChunkData{Node: &pbnode, Chunkid: id})
 	}
 
-	req := pb.ShareFileDataRequest{Chunkdata: chunkdata}
+	req := pb.ShareFileDataRequest{Chunkdata: chunkdata, Sequence: file.Sequence}
 	client := pb.NewUploadFileServiceClient(conn)
 	response, err := client.ShareFileData(ctx, &req)
 	if err != nil {
@@ -110,7 +108,7 @@ func (nc *NodeClient) ShareFileWithNode(ctx context.Context, file types.File, no
 }
 
 func (nc *NodeClient) UploadFileToServer(ctx context.Context, file types.File) {
-	for i, chunk := range file.Chunks {
+	for index, id := range file.Sequence {
 		nc.wg.Add(1)
 
 		go func(chunk types.Chunk, index int) {
@@ -120,7 +118,7 @@ func (nc *NodeClient) UploadFileToServer(ctx context.Context, file types.File) {
 			chunkdata := pb.Chunk{Id: chunk.Id, Data: chunk.Data}
 			req := pb.UploadFileRequest{Chunk: &chunkdata, Node: &pb.Node{Name: cmd.Name, Ip: cmd.Addr.IP.String(), Port: int32(cmd.Addr.Port)}}
 			nc.UploadFile(ctx, &req)
-		}(chunk, i)
+		}(file.Chunks[id], index)
 	}
 
 	log.Print("wating...")

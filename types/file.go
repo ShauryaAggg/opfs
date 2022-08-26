@@ -8,18 +8,20 @@ type Chunk struct {
 
 // A file gets distributed among the peers
 type File struct {
-	Name   string
-	Chunks []Chunk
+	Name     string
+	Chunks   map[string]Chunk
+	Sequence []string // sequence of chunk ids
 }
 
-func NewFile(name string, chunks []Chunk) *File {
-	return &File{Name: name, Chunks: chunks}
+func NewFile(name string, chunks map[string]Chunk, sequence []string) *File {
+	return &File{Name: name, Chunks: chunks, Sequence: sequence}
 }
 
 func (f *File) JoinChunks() []byte {
 	var data []byte
-	for _, chunk := range f.Chunks {
-		data = append(data, chunk.Data...)
+	for _, id := range f.Sequence {
+		data = append(data, f.Chunks[id].Data...)
 	}
+
 	return data
 }

@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ShauryaAg/opfs/cmd"
 	"github.com/ShauryaAg/opfs/config"
 	"github.com/ShauryaAg/opfs/service"
 	"github.com/ShauryaAg/opfs/types"
 	"github.com/ShauryaAg/opfs/utils"
+	"github.com/google/uuid"
 )
 
 func uploadFile(client *service.NodeClient) error {
@@ -20,11 +22,14 @@ func uploadFile(client *service.NodeClient) error {
 		return err
 	}
 
-	chunks := utils.DivideIntoChunks(data, config.ChunkSize)
-	file := types.NewFile("file-one", chunks)
+	chunks, sequence := utils.DivideIntoChunks(data, config.ChunkSize)
+	fmt.Printf("BEFORE: %v", chunks)
+	file := types.NewFile("file-one", chunks, sequence)
 
 	client.UploadFileToServer(context.Background(), *file)
-	// client.ShareFileWithNode(context.Background(), file, node)
+
+	node := types.Node{Name: uuid.New().String(), Ip: "0.0.0.0", Port: 8081}
+	client.ShareFileWithNode(context.Background(), *file, node)
 
 	return nil
 }

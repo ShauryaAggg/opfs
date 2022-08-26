@@ -53,6 +53,7 @@ func (ns *NodeServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest)
 
 func (ns *NodeServer) ShareFileData(ctx context.Context, req *pb.ShareFileDataRequest) (*pb.ShareFileDataResponse, error) {
 	chunkdata := req.GetChunkdata()
+	sequence := req.GetSequence()
 	filemap := make(map[string][]byte)
 
 	for _, data := range chunkdata {
@@ -69,13 +70,15 @@ func (ns *NodeServer) ShareFileData(ctx context.Context, req *pb.ShareFileDataRe
 		filemap[pbchunkid] = chunk
 	}
 
-	var chunks []types.Chunk
+	chunks := make(map[string]types.Chunk)
 	for id, data := range filemap {
-		chunks = append(chunks, types.Chunk{Id: id, Data: data})
+		chunks[id] = types.Chunk{Id: id, Data: data}
 	}
 
 	file := new(types.File)
 	file.Chunks = chunks
+	file.Sequence = sequence
+
 	binary := file.JoinChunks()
 	ehr, err := utils.ConvertBinaryToEhr(binary)
 	if err != nil {
@@ -135,12 +138,12 @@ func (ns *NodeServer) StartListening() error {
 	pb.RegisterUploadFileServiceServer(server, ns)
 	reflection.Register(server)
 
+	log.Printf("starting grpc server on: %d", ns.addr.Port)
 	if err := server.Serve(listener); err != nil {
 		log.Printf("Error while starting server %v", err)
 		return err
 	}
 
-	log.Printf("starting grpc server on: %d", ns.addr.Port)
 	return nil
 }
 

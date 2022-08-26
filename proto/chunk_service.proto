@@ -8,6 +8,7 @@ import "chunkdata_message.proto";
 
 message ShareFileDataRequest {
     repeated ChunkData chunkdata = 1;
+    repeated string sequence = 2;
 }
 
 message ShareFileDataResponse {
